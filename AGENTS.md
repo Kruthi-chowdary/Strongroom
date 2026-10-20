@@ -8,3 +8,4 @@ Rules you must follow in every change:
 6. Files are stored outside the web root under random UUIDs, encrypted at rest. Never build file paths from user input.
 7. Every security rule gets a test in /tests. Name tests after the threat in THREATS.md.
 8. Keep code small, typed and commented where a security decision is made.
+9. Never amend, rebase or force-push. Always make a new commit.

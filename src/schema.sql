@@ -6,10 +6,10 @@ CREATE TABLE IF NOT EXISTS users (
   id          TEXT PRIMARY KEY,          -- UUID v4
   email       TEXT NOT NULL UNIQUE,
   name        TEXT NOT NULL,
-  password_hash TEXT NOT NULL,           -- argon2id hash; never stored in plain text
+  password_hash TEXT NOT NULL,           -- bcrypt hash; never stored in plain text
   role        TEXT NOT NULL CHECK (role IN ('admin','owner','viewer')),
   department  TEXT,
-  disabled    INTEGER NOT NULL DEFAULT 0, -- 1 = account locked; checked on session creation
+  disabled    INTEGER NOT NULL DEFAULT 0, -- 1 = account locked; re-checked on every authorize() call
   created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 
