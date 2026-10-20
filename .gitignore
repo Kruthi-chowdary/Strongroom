@@ -41,3 +41,6 @@ Thumbs.db
 
 # Storage (uploaded files)
 storage/
+
+   test-out.txt
+   vitest-output.txt
