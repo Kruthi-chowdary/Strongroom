@@ -5,7 +5,7 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
-    "build": "tsc && copy src\\schema.sql dist\\schema.sql",
+    "build": "tsc && node -e \"require('fs').copyFileSync('src/schema.sql','dist/schema.sql')\"",
     "start": "node dist/server.js",
     "test": "vitest run",
     "test:auth": "vitest run tests/authorize.test.ts",
