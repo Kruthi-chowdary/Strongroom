@@ -103,6 +103,7 @@ describe('authorize: edge cases', () => {
   it('AUDIT: editing ip or detail_json breaks the hash', () => {
     const db = setup();
     authorize(db, { id: 'owner1', role: 'owner' }, 'doc1', 'read', { ip: '9.9.9.9' });
+    db.exec('DROP TRIGGER audit_no_update');
     db.prepare("UPDATE audit_log SET ip='1.2.3.4' WHERE id=1").run();
     const r = db.prepare('SELECT * FROM audit_log WHERE id=1').get() as AuditRow & { hash: string };
     expect(computeHash(r)).not.toBe(r.hash);

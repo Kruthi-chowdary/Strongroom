@@ -2,6 +2,7 @@ import express from 'express';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 
+import { adminRouter } from './routes/admin.routes';
 import { attachActor, csrfGuard } from './auth/middleware';
 import { authRouter }             from './routes/auth.routes';
 import { docsRouter, downloadRouter } from './documents/documents.routes';
@@ -27,6 +28,7 @@ app.get('/health', (_req, res) => {
 app.use('/api/auth', authRouter);
 app.use('/api/documents', docsRouter);
 app.use('/api/download', downloadRouter);
+app.use('/api/admin', adminRouter);
 
 // Placeholder landing page until the React UI is built.
 app.get('/', (_req, res) => {

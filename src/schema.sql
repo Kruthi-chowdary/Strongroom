@@ -75,3 +75,16 @@ CREATE TABLE IF NOT EXISTS audit_log (
 CREATE INDEX IF NOT EXISTS idx_audit_actor ON audit_log(actor_id);
 CREATE INDEX IF NOT EXISTS idx_audit_doc   ON audit_log(document_id);
 CREATE INDEX IF NOT EXISTS idx_audit_ts    ON audit_log(ts);
+
+-- Append-only audit log: block UPDATE and DELETE at the database level (Rule 5).
+CREATE TRIGGER IF NOT EXISTS audit_no_update
+BEFORE UPDATE ON audit_log
+BEGIN
+  SELECT RAISE(ABORT, 'audit_log is append-only');
+END;
+
+CREATE TRIGGER IF NOT EXISTS audit_no_delete
+BEFORE DELETE ON audit_log
+BEGIN
+  SELECT RAISE(ABORT, 'audit_log is append-only');
+END;

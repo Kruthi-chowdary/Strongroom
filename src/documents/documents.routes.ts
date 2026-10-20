@@ -113,3 +113,67 @@ downloadRouter.get('/:ticket', requireAuth, (req: Request, res: Response) => {
     res.setHeader('Cache-Control', 'no-store');
     res.send(data);
 });
+
+// POST /api/documents/:id/grants  { userId, permission, expiresAt? }  – owner only
+docsRouter.post('/:id/grants', requireAuth, (req: Request, res: Response) => {
+    const db = getDb();
+    const id = req.params['id'];
+    if (!isId(id) || !authorize(db, req.actor, id, 'share', { ip: req.ip ?? undefined }).allowed) {
+        res.status(404).json(NOT_FOUND); return;
+    }
+    const { userId, permission, expiresAt } = (req.body ?? {}) as Record<string, unknown>;
+    if (!isId(userId) || (permission !== 'read' && permission !== 'edit')) {
+        res.status(400).json({ error: 'invalid grant' }); return;
+    }
+    let exp: string | null = null;
+    if (expiresAt !== undefined && expiresAt !== null) {
+        const d = typeof expiresAt === 'string' ? new Date(expiresAt) : new Date(NaN);
+        if (isNaN(d.getTime()) || d.getTime() <= Date.now()) { res.status(400).json({ error: 'invalid expiry' }); return; }
+        exp = d.toISOString();
+    }
+    const target = db.prepare("SELECT id, role FROM users WHERE id = ? AND disabled = 0").get(userId) as { id: string; role: string } | undefined;
+    // Admins never receive document access; owner cannot grant to self.
+    if (!target || target.role === 'admin' || target.id === req.actor!.id) {
+        res.status(400).json({ error: 'invalid grant' }); return;
+    }
+    const grantId = uuidv4();
+    db.prepare(`INSERT INTO grants (id, document_id, user_id, permission, granted_by, expires_at)
+              VALUES (?, ?, ?, ?, ?, ?)`).run(grantId, id, userId, permission, req.actor!.id, exp);
+    appendAudit(db, {
+        actor_id: req.actor!.id, action: 'GRANT', document_id: id, target_user_id: userId,
+        outcome: 'ALLOWED', ip: req.ip ?? null, detail_json: JSON.stringify({ permission, expiresAt: exp })
+    });
+    res.status(201).json({ grantId });
+});
+
+// DELETE /api/documents/:id/grants/:grantId  – owner only, effective immediately
+docsRouter.delete('/:id/grants/:grantId', requireAuth, (req: Request, res: Response) => {
+    const db = getDb();
+    const id = req.params['id'];
+    const grantId = req.params['grantId'];
+    if (!isId(id) || !isId(grantId) || !authorize(db, req.actor, id, 'share', { ip: req.ip ?? undefined }).allowed) {
+        res.status(404).json(NOT_FOUND); return;
+    }
+    // document_id is part of the WHERE so a grant of another document cannot be revoked here.
+    const g = db.prepare('SELECT user_id FROM grants WHERE id = ? AND document_id = ? AND revoked_at IS NULL')
+        .get(grantId, id) as { user_id: string } | undefined;
+    if (!g) { res.status(404).json(NOT_FOUND); return; }
+    db.prepare("UPDATE grants SET revoked_at = strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id = ?").run(grantId);
+    appendAudit(db, {
+        actor_id: req.actor!.id, action: 'REVOKE', document_id: id, target_user_id: g.user_id,
+        outcome: 'ALLOWED', ip: req.ip ?? null, detail_json: JSON.stringify({ grantId })
+    });
+    res.json({ ok: true });
+});
+
+// GET /api/documents/:id/custody – chain of custody, owner only
+docsRouter.get('/:id/custody', requireAuth, (req: Request, res: Response) => {
+    const db = getDb();
+    const id = req.params['id'];
+    if (!isId(id) || !authorize(db, req.actor, id, 'share', { ip: req.ip ?? undefined }).allowed) {
+        res.status(404).json(NOT_FOUND); return;
+    }
+    const rows = db.prepare(`SELECT id, ts, actor_id, action, target_user_id, outcome FROM audit_log
+                           WHERE document_id = ? ORDER BY id DESC LIMIT 200`).all(id);
+    res.json({ items: rows });
+});
