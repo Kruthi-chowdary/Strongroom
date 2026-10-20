@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ── Stage 1: build ───────────────────────────────────────────────────────────
-FROM node:20-slim AS builder
+FROM node:22-slim AS builder
 WORKDIR /app
 # Toolchain in case better-sqlite3 has to compile from source.
 RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ \
@@ -13,7 +13,7 @@ COPY src/ ./src/
 RUN npm run build
 
 # ── Stage 2: runtime ─────────────────────────────────────────────────────────
-FROM node:20-slim AS runtime
+FROM node:22-slim AS runtime
 RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ \
  && rm -rf /var/lib/apt/lists/*
 RUN groupadd --gid 1001 strongroom \
