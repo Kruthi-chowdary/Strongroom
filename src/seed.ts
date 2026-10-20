@@ -5,6 +5,9 @@
  * Demo credentials are printed to STDOUT so developers know what to log in with.
  * This script must NEVER run in production (guarded below).
  *
+ * Auto-seeds on boot if SEED_DEMO=true AND the users table is empty.
+ * In all other cases the guard exits immediately.
+ *
  * NOTE: For production deployments, swap bcryptjs for argon2id (native build
  * tools required: Python + C++ compiler). The hash column stores the algorithm
  * prefix so migration is seamless.
@@ -14,6 +17,7 @@ import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import { getDb, closeDb } from './db';
 
+// Guard: never seed in production (Rule 5 – no demo credentials in prod).
 if (process.env['NODE_ENV'] === 'production') {
   console.error('seed.ts must not run in production');
   process.exit(1);
@@ -23,11 +27,11 @@ if (process.env['NODE_ENV'] === 'production') {
 const BCRYPT_ROUNDS = 12;
 
 interface DemoUser {
-  id: string;
-  email: string;
-  name: string;
-  password: string;
-  role: 'admin' | 'owner' | 'viewer';
+  id:         string;
+  email:      string;
+  name:       string;
+  password:   string;
+  role:       'admin' | 'owner' | 'viewer';
   department: string;
 }
 
@@ -88,6 +92,14 @@ const DEMO_USERS: DemoUser[] = [
 async function seed(): Promise<void> {
   const db = getDb();
 
+  // Auto-seed guard: only run when users table is empty (boot-time check).
+  // Called programmatically from server.ts when SEED_DEMO=true.
+  const count = (db.prepare('SELECT COUNT(*) AS n FROM users').get() as { n: number }).n;
+  if (count > 0) {
+    console.log('Users table already populated; skipping seed.');
+    return;
+  }
+
   const insert = db.prepare<[string, string, string, string, string, string]>(`
     INSERT INTO users (id, email, name, password_hash, role, department)
     VALUES (?, ?, ?, ?, ?, ?)
@@ -119,11 +131,17 @@ async function seed(): Promise<void> {
   insertAll();
 
   console.log('\nSeed complete.\n');
-  closeDb();
 }
 
-seed().catch((err: unknown) => {
-  console.error('Seed failed:', err);
-  closeDb();
-  process.exit(1);
-});
+// When run directly (ts-node src/seed.ts), close the DB afterwards.
+if (require.main === module) {
+  seed()
+    .then(() => closeDb())
+    .catch((err: unknown) => {
+      console.error('Seed failed:', err);
+      closeDb();
+      process.exit(1);
+    });
+}
+
+export { seed };
