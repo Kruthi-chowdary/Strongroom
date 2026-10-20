@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser';
 
 import { attachActor, csrfGuard } from './auth/middleware';
 import { authRouter }             from './routes/auth.routes';
+import { docsRouter, downloadRouter } from './documents/documents.routes';
 
 export const app = express();
 
@@ -24,6 +25,8 @@ app.get('/health', (_req, res) => {
 });
 
 app.use('/api/auth', authRouter);
+app.use('/api/documents', docsRouter);
+app.use('/api/download', downloadRouter);
 
 // Placeholder landing page until the React UI is built.
 app.get('/', (_req, res) => {
@@ -35,7 +38,7 @@ app.get('/', (_req, res) => {
   );
 });
 
-// All document routes (later) MUST call authorize() (Rule 1).
+// All document routes MUST call authorize() (Rule 1).
 
 if (require.main === module) {
   if (process.env['NODE_ENV'] === 'production' && !process.env['SESSION_SECRET']) {
@@ -43,7 +46,6 @@ if (require.main === module) {
   }
 
   void (async () => {
-    // Open DB (runs schema), then optionally seed BEFORE accepting traffic.
     const { getDb } = await import('./db');
     getDb();
     if (process.env['SEED_DEMO'] === 'true') {
