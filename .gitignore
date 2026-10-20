@@ -40,7 +40,7 @@ Thumbs.db
 .idea/
 
 # Storage (uploaded files)
-storage/
+/storage/
 
    test-out.txt
    vitest-output.txt
