@@ -1,24 +1,26 @@
 import express from 'express';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
+import path from 'path';
 
-import { adminRouter } from './routes/admin.routes';
 import { attachActor, csrfGuard } from './auth/middleware';
-import { authRouter }             from './routes/auth.routes';
+import { authRouter } from './routes/auth.routes';
 import { docsRouter, downloadRouter } from './documents/documents.routes';
+import { adminRouter } from './routes/admin.routes';
+import { usersRouter } from './routes/users.routes';
 
 export const app = express();
 
-// One reverse-proxy hop (Render) so req.ip is the real client IP.
 app.set('trust proxy', 1);
 
 app.use(helmet());
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
 
-// Identity comes only from the server-side session cookie (Rule 3).
+// Static UI (public/ holds only index.html, style.css, app.js – no secrets, no uploads).
+app.use(express.static(path.join(__dirname, '..', 'public')));
+
 app.use(attachActor);
-// CSRF defence for state-changing methods (Rule 4).
 app.use(csrfGuard);
 
 app.get('/health', (_req, res) => {
@@ -29,16 +31,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/documents', docsRouter);
 app.use('/api/download', downloadRouter);
 app.use('/api/admin', adminRouter);
-
-// Placeholder landing page until the React UI is built.
-app.get('/', (_req, res) => {
-  res.type('html').send(
-    '<!doctype html><title>Strongroom</title>' +
-    '<body style="background:#0b0b0d;color:#d9a441;font-family:monospace;padding:3rem">' +
-    '<h1>Strongroom</h1><p>Every door guarded. Every opening logged.</p>' +
-    '<p>API is live: <code>/health</code></p></body>'
-  );
-});
+app.use('/api/users', usersRouter);
 
 // All document routes MUST call authorize() (Rule 1).
 

@@ -177,3 +177,20 @@ docsRouter.get('/:id/custody', requireAuth, (req: Request, res: Response) => {
                            WHERE document_id = ? ORDER BY id DESC LIMIT 200`).all(id);
     res.json({ items: rows });
 });
+
+// GET /api/documents/:id/grants – active grants, owner only (share action)
+docsRouter.get('/:id/grants', requireAuth, (req: Request, res: Response) => {
+    const db = getDb();
+    const id = req.params['id'];
+    if (!isId(id) || !authorize(db, req.actor, id, 'share', { ip: req.ip ?? undefined }).allowed) {
+        res.status(404).json(NOT_FOUND); return;
+    }
+    const rows = db.prepare(`
+    SELECT g.id, g.user_id, u.name, u.email, g.permission, g.expires_at
+    FROM grants g JOIN users u ON u.id = g.user_id
+    WHERE g.document_id = ? AND g.revoked_at IS NULL
+      AND (g.expires_at IS NULL OR g.expires_at > strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    ORDER BY g.created_at DESC
+  `).all(id);
+    res.json({ items: rows });
+});

@@ -44,3 +44,6 @@ Thumbs.db
 
    test-out.txt
    vitest-output.txt
+
+   *.db-wal
+   *.db-shm
