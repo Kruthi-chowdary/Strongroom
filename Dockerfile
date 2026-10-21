@@ -23,8 +23,10 @@ COPY package*.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 # dist already contains schema.sql (copied by the build script)
 COPY --from=builder /app/dist ./dist
+# Static UI (index.html, style.css, app.js). server.ts serves ../public from dist/.
+COPY public ./public
 
-# Writable data dir for the SQLite file and (later) encrypted uploads.
+# Writable data dir for the SQLite file and encrypted uploads.
 RUN mkdir -p /data/storage && chown -R strongroom:strongroom /data
 ENV NODE_ENV=production
 ENV DB_PATH=/data/strongroom.db
