@@ -743,3 +743,491 @@ body:has(.login)::after {
         transform: translate(-50%, -50%);
     }
 }
+
+/* ===== Inside pages: layout, tiles, document rows, timeline ===== */
+.dash {
+    display: grid;
+    gap: 1.25rem;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    align-items: start
+}
+
+.dash.solo {
+    grid-template-columns: minmax(0, 860px)
+}
+
+.stack {
+    display: grid;
+    gap: 1rem;
+    min-width: 0
+}
+
+.stack>.card,
+.stack>.tiles {
+    margin: 0
+}
+
+.dash .detail {
+    position: sticky;
+    top: 1rem;
+    max-height: calc(100vh - 2rem);
+    overflow: auto
+}
+
+@media (max-width: 900px) {
+
+    .dash,
+    .dash.solo {
+        grid-template-columns: minmax(0, 1fr)
+    }
+
+    .dash .detail {
+        position: static;
+        max-height: none
+    }
+}
+
+/* stat tiles */
+.tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: .8rem;
+    margin-bottom: 1rem
+}
+
+.tile {
+    display: flex;
+    flex-direction: column;
+    gap: .1rem;
+    padding: .8rem 1rem;
+    background: #fff;
+    border: 1px solid #e7e0cf;
+    border-left: 4px solid #9a6a14;
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(36, 49, 44, .05)
+}
+
+.tile strong {
+    font-size: 1.7rem;
+    line-height: 1.1;
+    color: #24312c
+}
+
+.tile span {
+    font-size: .85rem;
+    color: #6b756f
+}
+
+.tile.good {
+    border-left-color: #2c5646
+}
+
+.tile.good strong {
+    color: #2c5646
+}
+
+.tile.warn {
+    border-left-color: #c27a1a
+}
+
+.tile.warn strong {
+    color: #a5610f
+}
+
+.tile.bad {
+    border-left-color: #a33a2f
+}
+
+.tile.bad strong {
+    color: #a33a2f
+}
+
+/* search form */
+.sform {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: .8rem;
+    align-items: end
+}
+
+.sform input,
+.sform select {
+    width: 100%;
+    box-sizing: border-box
+}
+
+.sform select {
+    padding: .65rem .8rem;
+    border: 1px solid #e0d8c4;
+    border-radius: 12px;
+    background: #fffdf8;
+    font: inherit
+}
+
+@media (max-width: 620px) {
+    .sform {
+        grid-template-columns: 1fr
+    }
+}
+
+/* upload (collapsible) */
+.fold summary {
+    cursor: pointer;
+    font-weight: 700;
+    color: #9a6a14;
+    list-style: none
+}
+
+.fold summary::-webkit-details-marker {
+    display: none
+}
+
+.fold[open] summary {
+    margin-bottom: 1rem
+}
+
+.uform {
+    display: grid;
+    gap: .9rem
+}
+
+.uform .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: end
+}
+
+/* document rows */
+.drow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: .85rem 0;
+    border-bottom: 1px solid #eee8d8
+}
+
+.drow:last-child {
+    border-bottom: 0
+}
+
+.dinfo {
+    min-width: 0;
+    flex: 1
+}
+
+.dinfo .name {
+    font-weight: 700;
+    overflow-wrap: anywhere
+}
+
+.dinfo .meta {
+    font-size: .88rem;
+    color: #6b756f;
+    margin-top: .15rem
+}
+
+.dact {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    flex: none
+}
+
+.drow .badge {
+    width: auto;
+    flex: none;
+    display: inline-block;
+    padding: .15rem .6rem
+}
+
+.drow button {
+    padding: .45rem .8rem;
+    font-size: 14px;
+    white-space: nowrap
+}
+
+@media (max-width: 620px) {
+    .drow {
+        flex-direction: column;
+        align-items: flex-start
+    }
+
+    .dact {
+        justify-content: flex-start
+    }
+}
+
+/* detail panel */
+.dhead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem
+}
+
+.dhead h2 {
+    margin: 0;
+    overflow-wrap: anywhere
+}
+
+.dhead button {
+    padding: .35rem .8rem;
+    font-size: 14px
+}
+
+.empty {
+    text-align: center;
+    padding: 2.5rem 1rem
+}
+
+.empty .lock {
+    display: inline-block;
+    transform: scale(1.9);
+    margin-bottom: 1.2rem
+}
+
+.empty h2 {
+    margin: .4rem 0
+}
+
+.empty p {
+    max-width: 34ch;
+    margin: 0 auto
+}
+
+/* chain of custody: icons + colour, not colour alone */
+.timeline {
+    list-style: none;
+    margin: .6rem 0 0;
+    padding: 0;
+    display: grid;
+    gap: .5rem
+}
+
+.timeline li.ev {
+    display: flex;
+    gap: .7rem;
+    align-items: flex-start;
+    padding: .6rem .75rem;
+    border-radius: 12px;
+    border: 1px solid #e7e0cf;
+    background: #fff
+}
+
+.timeline li.ev::before,
+.timeline li.ev::after {
+    content: none
+}
+
+.timeline li.ev .ico {
+    flex: none;
+    width: 1.6rem;
+    height: 1.6rem;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font: 700 .95rem Arial, sans-serif
+}
+
+.timeline li.ev.ALLOWED {
+    border-color: #cfe2d7;
+    background: #f4faf6
+}
+
+.timeline li.ev.ALLOWED .ico {
+    background: #2c5646;
+    color: #fff
+}
+
+.timeline li.ev.DENIED {
+    border-color: #efc9c4;
+    background: #fdf3f1
+}
+
+.timeline li.ev.DENIED .ico {
+    background: #a33a2f;
+    color: #fff
+}
+
+.timeline .evt {
+    font-weight: 700
+}
+
+.timeline .t {
+    font-size: .84rem;
+    color: #6b756f
+}
+
+/* admin header */
+.pagehead {
+    margin-bottom: 1rem
+}
+
+.pagetitle {
+    margin: .2rem 0;
+    font-size: 2rem;
+    letter-spacing: .04em;
+    color: #24312c
+}
+
+/* ===== Theme picker + dark theme ===== */
+.themesel {
+    padding: .4rem .6rem;
+    border: 1px solid #e0d8c4;
+    border-radius: 12px;
+    background: #fffdf8;
+    font: inherit;
+    font-size: 14px;
+    cursor: pointer
+}
+
+body,
+.top,
+.card,
+.tile,
+input,
+select,
+button {
+    transition: background-color .25s, color .25s, border-color .25s
+}
+
+html[data-theme="dark"] {
+    color-scheme: dark;
+    --panel: #17211d;
+    --text: #e9e4d6;
+    --muted: #a3aea6
+}
+
+html[data-theme="dark"] body {
+    background-color: #0f1613;
+    color: #e9e4d6
+}
+
+html[data-theme="dark"] body:not(:has(.login)) {
+    background-image: none
+}
+
+html[data-theme="dark"] .top {
+    background: #121b17;
+    border-color: #2a3730
+}
+
+html[data-theme="dark"] .brand {
+    color: #d9a441
+}
+
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .tile {
+    background: #17211d;
+    border-color: #2a3730;
+    color: #e9e4d6
+}
+
+html[data-theme="dark"] .login {
+    background: #17211d
+}
+
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] .themesel {
+    background: #0f1613;
+    border-color: #33443b;
+    color: #e9e4d6
+}
+
+html[data-theme="dark"] ::placeholder {
+    color: #7f8c84
+}
+
+html[data-theme="dark"] button:not(.primary):not(.danger) {
+    background: #1d2924;
+    border-color: #33443b;
+    color: #e9e4d6
+}
+
+html[data-theme="dark"] button:not(.primary):not(.danger):hover {
+    background: #25342d
+}
+
+html[data-theme="dark"] .muted,
+html[data-theme="dark"] .tag,
+html[data-theme="dark"] .meta,
+html[data-theme="dark"] .tile span,
+html[data-theme="dark"] .timeline .t {
+    color: #a3aea6
+}
+
+html[data-theme="dark"] .pagetitle,
+html[data-theme="dark"] .tile strong {
+    color: #e9e4d6
+}
+
+html[data-theme="dark"] .tile.good strong {
+    color: #6fbf9a
+}
+
+html[data-theme="dark"] .tile.warn strong {
+    color: #e0a24a
+}
+
+html[data-theme="dark"] .tile.bad strong {
+    color: #ee7b6e
+}
+
+html[data-theme="dark"] .fold summary {
+    color: #d9a441
+}
+
+html[data-theme="dark"] .drop {
+    background: #121b17;
+    border-color: #3a4a41;
+    color: #a3aea6
+}
+
+html[data-theme="dark"] .drow {
+    border-color: #2a3730
+}
+
+html[data-theme="dark"] table,
+html[data-theme="dark"] th,
+html[data-theme="dark"] td {
+    border-color: #2a3730
+}
+
+html[data-theme="dark"] th {
+    background: #1d2924;
+    color: #e9e4d6
+}
+
+html[data-theme="dark"] .timeline li.ev {
+    background: #17211d;
+    border-color: #2a3730
+}
+
+html[data-theme="dark"] .timeline li.ev.ALLOWED {
+    background: #14261e;
+    border-color: #24473a
+}
+
+html[data-theme="dark"] .timeline li.ev.DENIED {
+    background: #2a1714;
+    border-color: #5a2b25
+}
+
+html[data-theme="dark"] .timeline li.ev.ALLOWED .ico {
+    background: #3f8f6f
+}
+
+html[data-theme="dark"] .timeline li.ev.DENIED .ico {
+    background: #c4473b
+}
+
+/* login page background in dark */
+html[data-theme="dark"] body:has(.login) {
+    background-color: #0d1411
+}

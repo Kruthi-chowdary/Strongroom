@@ -100,6 +100,16 @@ async function boot() {
     shell();
 }
 
+function themePicker() {
+    const sel = h('select', { id: 'theme', class: 'themesel', 'aria-label': 'Colour theme' },
+        h('option', { value: 'light' }, '\u2600 Light'),
+        h('option', { value: 'dark' }, '\u263e Dark'),
+        h('option', { value: 'system' }, '\u2699 System'));
+    sel.value = window.StrongroomTheme.get();
+    sel.addEventListener('change', () => window.StrongroomTheme.set(sel.value));
+    return sel;
+}
+
 function shell() {
     const main = h('main', { id: 'main' });
     app.replaceChildren(
@@ -107,52 +117,115 @@ function shell() {
             h('div', { class: 'brand' }, h('span', { class: 'lock', 'aria-hidden': 'true' }), 'STRONGROOM'),
             h('span', { class: 'spacer' }),
             h('span', null, state.me.name), h('span', { class: 'badge ' + state.me.role }, state.me.role),
+                        h('span', null, state.me.name), h('span', { class: 'badge ' + state.me.role }, state.me.role),
+            themePicker(),
             h('button', { onclick: async () => { try { await api('/api/auth/logout', { method: 'POST' }); } catch (e) { } state.me = null; showLogin(); } }, 'Log out')),
         main);
     if (state.me.role === 'admin') adminView(main); else docsView(main);
 }
 
 /* ---------- documents ---------- */
+
+/* Friendly names for audit actions. Unknown codes fall back to a prettified version. */
+const ACTIONS = {
+    UPLOAD: ['Uploaded', 'upload'],
+    DOWNLOAD: ['Downloaded', 'download'],
+    DOWNLOAD_TICKET: ['Download requested', 'download request'],
+    READ: ['Opened', 'open'],
+    EDIT: ['Edited', 'edit'],
+    DELETE: ['Deleted', 'delete'],
+    SHARE: ['Viewed sharing panel', 'sharing panel'],
+    GRANT: ['Access granted', 'grant'],
+    REVOKE: ['Access revoked', 'revoke'],
+    VIEW_AUDIT: ['Viewed audit log', 'audit view'],
+};
+function actionText(action, outcome) {
+    const pretty = String(action || '').replace(/_/g, ' ').toLowerCase();
+    const e = ACTIONS[String(action || '').toUpperCase()];
+    if (outcome === 'DENIED') return 'Refused: ' + (e ? e[1] : pretty);
+    return e ? e[0] : pretty.charAt(0).toUpperCase() + pretty.slice(1);
+}
+
+/* A small stat tile; .set() lets the admin page update it later. */
+function tile(label, value, tone) {
+    const v = h('strong', null, String(value));
+    const el = h('div', { class: 'tile' + (tone ? ' ' + tone : '') }, v, h('span', null, label));
+    return { el, set: (val, tn) => { v.textContent = String(val); el.className = 'tile' + (tn ? ' ' + tn : ''); } };
+}
+
+function detailPlaceholder(box) {
+    box.hidden = false;
+    box.replaceChildren(h('div', { class: 'empty' },
+        h('span', { class: 'lock', 'aria-hidden': 'true' }),
+        h('h2', null, 'Chain of custody'),
+        h('p', { class: 'muted' }, 'Choose "Share & custody" on a document to see who has access, and every attempt to reach it, allowed or refused.')));
+}
+
 function docsView(main) {
     const isOwner = state.me.role === 'owner';
     if (!isOwner) state.tab = 'shared';
     const list = h('div', { class: 'card', 'aria-live': 'polite' });
-    const detail = h('div', { class: 'card', id: 'detail', hidden: true });
-    const q = h('input', { id: 'q', type: 'search', placeholder: 'name contains…' });
-    const cat = h('input', { id: 'cat', placeholder: 'category' });
+    const detail = h('div', { class: 'card detail', id: 'detail' });
+    const q = h('input', { id: 'q', type: 'search', placeholder: 'name contains\u2026' });
+    const cat = h('select', { id: 'cat' }, h('option', { value: '' }, 'All categories'));
     const tabs = h('div', { class: 'row' });
+    const stats = h('div', { class: 'tiles' });
+    const cats = new Set();
 
     async function load() {
         const p = new URLSearchParams();
         if (q.value) p.set('q', q.value);
         if (cat.value) p.set('category', cat.value);
         try { state.docs = (await api('/api/documents?' + p)).items; } catch (e) { return say('Could not load documents', true); }
+        state.docs.forEach((d) => cats.add(d.category));
+        const keep = cat.value;
+        cat.replaceChildren(h('option', { value: '' }, 'All categories'),
+            ...[...cats].sort().map((c) => h('option', { value: c }, c)));
+        cat.value = keep;
         paint();
     }
+
     function paint() {
-        const items = state.docs.filter((d) => (state.tab === 'mine' ? d.access === 'owner' : d.access !== 'owner'));
-        tabs.replaceChildren(...(isOwner ? [['mine', 'My documents'], ['shared', 'Shared with me']] : [['shared', 'Shared with me']])
-            .map(([k, label]) => h('button', { class: 'tab', 'aria-current': String(state.tab === k), onclick: () => { state.tab = k; paint(); } }, label)));
+        const mine = state.docs.filter((d) => d.access === 'owner');
+        const shared = state.docs.filter((d) => d.access !== 'owner');
+        const items = state.tab === 'mine' ? mine : shared;
+        const stat = (n, l) => h('div', { class: 'tile' }, h('strong', null, String(n)), h('span', null, l));
+
+        stats.replaceChildren(
+            ...(isOwner ? [stat(mine.length, 'Documents I own')] : []),
+            stat(shared.length, 'Shared with me'),
+            stat(cats.size, 'Categories'));
+
+        const tabDefs = isOwner
+            ? [['mine', 'My documents (' + mine.length + ')'], ['shared', 'Shared with me (' + shared.length + ')']]
+            : [['shared', 'Shared with me (' + shared.length + ')']];
+        tabs.replaceChildren(...tabDefs.map(([k, label]) =>
+            h('button', { class: 'tab', 'aria-current': String(state.tab === k), onclick: () => { state.tab = k; paint(); } }, label)));
+
         list.replaceChildren(
-            ...(items.length ? items.map((d) => h('div', { class: 'doc' },
-                h('div', null,
+            ...(items.length ? items.map((d) => h('div', { class: 'drow' },
+                h('div', { class: 'dinfo' },
                     h('div', { class: 'name' }, d.name),
-                    h('div', { class: 'meta' }, [d.category, kb(d.size), 'owner: ' + d.owner_name, fmt(d.created_at)].join(' · '))),
-                h('div', { class: 'row' },
+                    h('div', { class: 'meta' }, [d.category, kb(d.size), 'owner: ' + d.owner_name, fmt(d.created_at)].join(' \u00b7 '))),
+                h('div', { class: 'dact' },
                     h('span', { class: 'badge ' + d.access }, d.access),
                     h('button', { onclick: () => download(d) }, 'Download'),
                     d.access === 'owner' ? h('button', { class: 'primary', onclick: () => openDetail(d, detail) }, 'Share & custody') : null)))
-                : [h('p', { class: 'muted' }, state.tab === 'mine' ? 'No documents yet.' : 'Nothing has been shared with you.')]));
+                : [h('p', { class: 'muted' }, state.tab === 'mine'
+                    ? 'No documents yet. Open "Upload a document" above to add your first one.'
+                    : 'Nothing has been shared with you yet. When an owner grants you access, it appears here.')]));
     }
 
-    const search = h('form', { class: 'row', onsubmit: (e) => { e.preventDefault(); load(); } },
+    cat.addEventListener('change', load);
+    const search = h('form', { class: 'sform', onsubmit: (e) => { e.preventDefault(); load(); } },
         h('div', null, h('label', { for: 'q' }, 'Search'), q),
         h('div', null, h('label', { for: 'cat' }, 'Category'), cat),
         h('button', { type: 'submit' }, 'Search'));
 
-    main.replaceChildren(h('div', { class: 'grid two' },
-        h('div', null, h('div', { class: 'card' }, search), tabs, list, isOwner ? uploadCard(load) : null),
-        detail));
+    main.replaceChildren(h('div', { class: 'dash' + (isOwner ? '' : ' solo') },
+        h('div', { class: 'stack' }, stats, h('div', { class: 'card' }, search), isOwner ? uploadCard(load) : null, tabs, list),
+        isOwner ? detail : null));
+    if (isOwner) detailPlaceholder(detail);
     load();
 }
 
@@ -172,7 +245,7 @@ async function download(d) {
 function uploadCard(reload) {
     const file = h('input', { type: 'file', id: 'file', accept: '.pdf,.docx,.xlsx,.png,.jpg,.txt,.csv' });
     const cat = h('input', { id: 'upcat', value: 'General', maxlength: '40' });
-    const drop = h('div', { class: 'drop', tabindex: '0' }, 'Drop a file here, or choose one below (pdf, docx, xlsx, png, jpg, txt, csv · max 5 MB)');
+    const drop = h('div', { class: 'drop', tabindex: '0' }, 'Drop a file here, or choose one below (pdf, docx, xlsx, png, jpg, txt, csv \u00b7 max 5 MB)');
     let picked = null;
     const setFile = (f) => { picked = f; drop.textContent = f ? 'Selected: ' + f.name : 'Drop a file here'; };
     ['dragenter', 'dragover'].forEach((n) => drop.addEventListener(n, (e) => { e.preventDefault(); drop.classList.add('over'); }));
@@ -180,8 +253,8 @@ function uploadCard(reload) {
     drop.addEventListener('drop', (e) => setFile(e.dataTransfer.files[0] || null));
     file.addEventListener('change', () => setFile(file.files[0] || null));
     const btn = h('button', { class: 'primary', type: 'submit' }, 'Encrypt & upload');
-    return h('form', {
-        class: 'card',
+    const form = h('form', {
+        class: 'uform',
         onsubmit: async (e) => {
             e.preventDefault();
             if (!picked) return say('Choose a file first', true);
@@ -193,13 +266,14 @@ function uploadCard(reload) {
             catch (err) { say('Upload rejected: ' + err.message, true); }
             btn.disabled = false;
         },
-    }, h('h2', null, 'Upload'), drop,
+    }, drop,
         h('div', { class: 'row' }, h('div', null, h('label', { for: 'file' }, 'File'), file), h('div', null, h('label', { for: 'upcat' }, 'Category'), cat), btn));
+    return h('details', { class: 'card fold' }, h('summary', null, '\u2b06 Upload a document \u00b7 encrypted at rest'), form);
 }
 
 async function openDetail(d, box) {
     box.hidden = false;
-    box.replaceChildren(h('p', { class: 'muted' }, 'Loading…'));
+    box.replaceChildren(h('p', { class: 'muted' }, 'Loading\u2026'));
     let g, c;
     try {
         [g, c] = await Promise.all([api('/api/documents/' + d.id + '/grants'), api('/api/documents/' + d.id + '/custody')]);
@@ -224,11 +298,12 @@ async function openDetail(d, box) {
         h('button', { class: 'primary', type: 'submit' }, 'Grant'));
 
     box.replaceChildren(
-        h('h2', null, d.name),
+        h('div', { class: 'dhead' }, h('h2', null, d.name),
+            h('button', { type: 'button', onclick: () => detailPlaceholder(box) }, 'Close')),
         h('h3', null, 'Who has access'),
         g.items.length
             ? h('ul', { class: 'plain' }, g.items.map((x) => h('li', null,
-                h('span', null, x.name + ' · ', h('span', { class: 'badge ' + x.permission }, x.permission), x.expires_at ? ' · until ' + fmt(x.expires_at) : ''),
+                h('span', null, x.name + ' \u00b7 ', h('span', { class: 'badge ' + x.permission }, x.permission), x.expires_at ? ' \u00b7 until ' + fmt(x.expires_at) : ''),
                 h('button', {
                     class: 'danger', onclick: async () => {
                         try { await api('/api/documents/' + d.id + '/grants/' + x.id, { method: 'DELETE' }); say('Access revoked: effective immediately'); openDetail(d, box); }
@@ -238,30 +313,55 @@ async function openDetail(d, box) {
             : h('p', { class: 'muted' }, 'Only you.'),
         h('h3', null, 'Share'), add,
         h('h3', { style: 'margin-top:1rem' }, 'Chain of custody'),
-        h('p', { class: 'tag' }, 'Green = allowed · red = refused. Refusals are recorded too.'),
-        h('ul', { class: 'timeline' }, c.items.map((r) => h('li', { class: r.outcome },
-            h('span', { class: 't' }, fmt(r.ts) + ' · #' + r.id),
-            r.action + ' by ' + who(r.actor_id) + (r.target_user_id ? ' → ' + who(r.target_user_id) : '') + ' · ' + r.outcome))));
+        h('p', { class: 'tag' }, '\u2713 allowed \u00b7 \u2717 refused. Refusals are recorded too.'),
+        c.items.length
+            ? h('ul', { class: 'timeline' }, c.items.map((r) => {
+                const ok = r.outcome !== 'DENIED';
+                return h('li', { class: r.outcome + ' ev' },
+                    h('span', { class: 'ico', 'aria-hidden': 'true' }, ok ? '\u2713' : '\u2717'),
+                    h('div', null,
+                        h('div', { class: 'evt' }, actionText(r.action, r.outcome)),
+                        h('div', { class: 't' }, [who(r.actor_id) + (r.target_user_id ? ' \u2192 ' + who(r.target_user_id) : ''), fmt(r.ts), '#' + r.id].join(' \u00b7 '))));
+            }))
+            : h('p', { class: 'muted' }, 'No activity yet.'));
 }
 
 /* ---------- admin ---------- */
 function adminView(main) {
-    const notable = h('div', { class: 'card' }, h('h2', null, 'Tripwire panel'), h('p', { class: 'muted' }, 'Loading…'));
+    const notable = h('div', { class: 'card' }, h('h2', null, 'Tripwire panel'), h('p', { class: 'muted' }, 'Loading\u2026'));
     const verifyBox = h('div', { 'aria-live': 'polite' });
     const auditBox = h('div', { class: 'scroll' });
     const action = h('input', { id: 'fa', placeholder: 'e.g. DOWNLOAD' });
     const outcome = h('select', { id: 'fo' }, h('option', { value: '' }, 'any'), h('option', { value: 'DENIED' }, 'DENIED'), h('option', { value: 'ALLOWED' }, 'ALLOWED'));
 
+    const tFlag = tile('Flagged users', '\u2026');
+    const tDis = tile('Disabled-user attempts', '\u2026');
+    const tPerm = tile('Permission changes', '\u2026');
+    const tRef = tile('Refusals today', '\u2026');
+    const tLed = tile('Ledger', 'not verified');
+
     async function loadNotable() {
         try {
             const n = await api('/api/admin/notable');
+            tFlag.set(n.repeatedDenials.length, n.repeatedDenials.length ? 'warn' : 'good');
+            tDis.set(n.disabledUserAttempts.length, n.disabledUserAttempts.length ? 'warn' : 'good');
+            tPerm.set(n.recentGrantsRevokes.length, '');
             const sec = (title, rows, line) => h('div', null, h('h3', null, title + ' (' + rows.length + ')'),
                 rows.length ? h('ul', { class: 'plain' }, rows.map((r) => h('li', null, line(r)))) : h('p', { class: 'muted' }, 'Nothing flagged.'));
             notable.replaceChildren(h('h2', null, 'Tripwire panel'),
                 sec('Repeated denials (5+ in 10 min)', n.repeatedDenials, (r) => who(r.actor_id) + ': ' + r.denials + ' refusals'),
-                sec('Attempts by disabled users', n.disabledUserAttempts, (r) => fmt(r.ts) + ' · ' + who(r.actor_id) + ' · ' + r.action),
-                sec('Recent permission changes', n.recentGrantsRevokes, (r) => fmt(r.ts) + ' · ' + r.action + ' ' + who(r.actor_id) + ' → ' + who(r.target_user_id)));
+                sec('Attempts by disabled users', n.disabledUserAttempts, (r) => fmt(r.ts) + ' \u00b7 ' + who(r.actor_id) + ' \u00b7 ' + r.action),
+                sec('Recent permission changes', n.recentGrantsRevokes, (r) => fmt(r.ts) + ' \u00b7 ' + r.action + ' ' + who(r.actor_id) + ' \u2192 ' + who(r.target_user_id)));
         } catch (e) { say('Could not load tripwires', true); }
+    }
+    /* Refusals today, counted from the latest 100 refused entries. */
+    async function loadRefusals() {
+        try {
+            const a = await api('/api/admin/audit?limit=100&outcome=DENIED');
+            const today = new Date().toDateString();
+            const n = a.items.filter((r) => new Date(r.ts).toDateString() === today).length;
+            tRef.set(n === 100 ? '100+' : n, n ? 'warn' : 'good');
+        } catch (e) { /* tile stays as is */ }
     }
     async function loadAudit() {
         const p = new URLSearchParams({ limit: '100' });
@@ -275,11 +375,11 @@ function adminView(main) {
                     h('td', { class: 'mono' }, r.id), h('td', null, fmt(r.ts)), h('td', null, who(r.actor_id)), h('td', null, r.action),
                     h('td', { class: 'mono' }, short(r.document_id)), h('td', null, who(r.target_user_id)),
                     h('td', { class: r.outcome === 'DENIED' ? 'den' : 'alw' }, r.outcome), h('td', { class: 'mono' }, r.ip || ''),
-                    h('td', { class: 'mono' }, r.hash.slice(0, 10) + '…'))))));
+                    h('td', { class: 'mono' }, r.hash.slice(0, 10) + '\u2026'))))));
         } catch (e) { say('Could not load audit log', true); }
     }
     async function verify() {
-        verifyBox.replaceChildren(h('p', { class: 'muted' }, 'Recomputing every hash in the chain…'));
+        verifyBox.replaceChildren(h('p', { class: 'muted' }, 'Recomputing every hash in the chain\u2026'));
         let r;
         try { r = await api('/api/admin/audit/verify'); } catch (e) { return say('Verify failed', true); }
         const n = Math.min(r.rows, 90);
@@ -293,20 +393,24 @@ function adminView(main) {
             b.classList.add('ok');
         }
         verdict.className = 'verdict ' + (r.ok ? 'ok' : 'bad');
-        verdict.textContent = r.ok ? '✓ Ledger intact · ' + r.rows + ' entries' : '✗ Chain broken at entry #' + r.firstBrokenId;
+        verdict.textContent = r.ok ? '\u2713 Ledger intact \u00b7 ' + r.rows + ' entries' : '\u2717 Chain broken at entry #' + r.firstBrokenId;
+        tLed.set(r.ok ? '\u2713 intact' : '\u2717 broken', r.ok ? 'good' : 'bad');
         if (r.ok && r.head) verifyBox.append(h('p', { class: 'tag mono' }, 'head: ' + r.head));
     }
 
     main.replaceChildren(
-        h('p', { class: 'muted' }, 'Admins see activity and permission changes, never document contents.'),
-        h('div', { class: 'grid two' }, notable,
+        h('div', { class: 'pagehead' },
+            h('h1', { class: 'pagetitle' }, 'Security console'),
+            h('p', { class: 'muted' }, 'Admins see activity and permission changes, never document contents.')),
+        h('div', { class: 'tiles' }, tFlag.el, tDis.el, tPerm.el, tRef.el, tLed.el),
+        h('div', { class: 'dash' }, notable,
             h('div', { class: 'card' }, h('h2', null, 'Ledger'), h('button', { class: 'primary', onclick: verify }, 'Verify ledger'), verifyBox)),
         h('div', { class: 'card' }, h('h2', null, 'Audit browser'),
             h('form', { class: 'row', onsubmit: (e) => { e.preventDefault(); loadAudit(); } },
                 h('div', null, h('label', { for: 'fa' }, 'Action'), action),
                 h('div', null, h('label', { for: 'fo' }, 'Outcome'), outcome),
                 h('button', { type: 'submit' }, 'Filter')), auditBox));
-    loadNotable(); loadAudit();
+    loadNotable(); loadRefusals(); loadAudit();
 }
 
 boot();
