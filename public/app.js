@@ -117,7 +117,6 @@ function shell() {
             h('div', { class: 'brand' }, h('span', { class: 'lock', 'aria-hidden': 'true' }), 'STRONGROOM'),
             h('span', { class: 'spacer' }),
             h('span', null, state.me.name), h('span', { class: 'badge ' + state.me.role }, state.me.role),
-                        h('span', null, state.me.name), h('span', { class: 'badge ' + state.me.role }, state.me.role),
             themePicker(),
             h('button', { onclick: async () => { try { await api('/api/auth/logout', { method: 'POST' }); } catch (e) { } state.me = null; showLogin(); } }, 'Log out')),
         main);

@@ -1231,3 +1231,19 @@ html[data-theme="dark"] .timeline li.ev.DENIED .ico {
 html[data-theme="dark"] body:has(.login) {
     background-color: #0d1411
 }
+
+/* ===== Dark theme: contrast fixes ===== */
+html[data-theme="dark"] {
+    --ink: #0f1613;
+    --line: #2a3730;
+    --panel2: #1d2924;
+}
+
+html[data-theme="dark"] h2,
+html[data-theme="dark"] .card h2 {
+    color: #d9a441
+}
+
+html[data-theme="dark"] .badge {
+    border-color: #33443b
+}
