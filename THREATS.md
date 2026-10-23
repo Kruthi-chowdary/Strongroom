@@ -38,7 +38,7 @@ How I think Strongroom could be broken, what I did, and what I knowingly left op
 | **User directory visible to owners** | Needed to pick who to share with. Only enabled non-admin users, names and emails | accepted |
 | **Noisy audit rows** | Opening the Share panel writes `share` rows for the grants and custody lists. Not a security weakness, but it clutters the log | accepted |
 | **Public demo passwords** | Required so judges can log in. Demo data only | accepted |
-| **Dependency vulnerabilities** | `npm audit` reports 9 issues (mostly dev tooling). I did not run `audit fix --force`, which risks breaking the build. Needs triage | accepted |
+| **Dependency vulnerabilities** | Production audit is clean (`npm audit --omit=dev`: 0 issues). 5 remaining findings are dev-only tooling (test runner, dev server) and are not in the deployed image, because the Dockerfile installs with `--omit=dev`. I did not use `npm audit fix --force` because it risks breaking the build. | accepted |
 | **No MFA, no password change or reset flow** | Out of scope for this week | accepted |
 | **Tripwires are basic** | Repeated denials, attempts by disabled users, permission changes. Off-hours downloads and external-domain grants are not implemented | accepted |
 | **`edit` and `delete` have no routes** | `authorize()` enforces them and the matrix tests them, but nothing calls them yet | accepted |
