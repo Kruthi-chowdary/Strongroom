@@ -5,7 +5,7 @@
 A secure document-sharing platform where the wrong person cannot reach a file, and every access (including refused attempts) is written to a tamper-evident ledger.
 
 **Live demo:** https://strongroom-buas.onrender.com
-**Repo:** https://github.com/Kruthi-chowdary/Strongroom   <-- CHECK
+**Repo:** https://github.com/Kruthi-chowdary/Strongroom
 
 > The demo runs on Render's free tier: it sleeps after ~15 min idle (first load can take 30-60 s) and its disk is ephemeral, so the database resets and **reseeds on every restart**. Demo data only.
 
@@ -56,7 +56,7 @@ Every row stores `hash = sha256(prev_hash + JSON of every column)`. SQLite trigg
 Requires Node 22+.
 
 ```bash
-git clone https://github.com/Kruthi-chowdary/Strongroom.git   # <-- CHECK
+git clone https://github.com/Kruthi-chowdary/Strongroom.git
 cd Strongroom
 npm ci
 npm test            # 154 tests
