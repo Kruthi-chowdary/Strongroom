@@ -1,15 +1,17 @@
 :root {
-    --ink: #0b0b0d;
-    --panel: #141418;
-    --panel2: #1b1b21;
-    --line: #2a2a32;
-    --text: #e8e6e1;
-    --muted: #8b8a93;
-    --brass: #d9a441;
-    --brass2: #f0c36a;
-    --ok: #3ecf8e;
-    --bad: #ff5d5d;
-    --mono: ui-monospace, SFMono-Regular, Consolas, Menlo, monospace
+    --ink: #f7f3ea;
+    --panel: #ffffff;
+    --panel2: #f3eee2;
+    --line: #e4dccb;
+    --text: #24312c;
+    --muted: #6b766f;
+    --brass: #9a6a14;
+    --brass2: #7d530c;
+    --ok: #1d8a5a;
+    --bad: #c0392b;
+    --mono: ui-monospace, SFMono-Regular, Consolas, Menlo, monospace;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+    --shadow: 0 1px 2px rgba(36, 49, 44, .05), 0 12px 28px -16px rgba(36, 49, 44, .22)
 }
 
 * {
@@ -23,8 +25,8 @@ html {
 body {
     margin: 0;
     color: var(--text);
-    font: 15px/1.5 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-    background: radial-gradient(900px 500px at 80% -10%, #1d1a12 0, transparent 60%), var(--ink);
+    font: 15px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    background: radial-gradient(900px 500px at 85% -10%, #f0e3c2 0, transparent 60%), radial-gradient(700px 400px at -10% 110%, #e3eadf 0, transparent 60%), var(--ink);
     min-height: 100vh
 }
 
@@ -37,13 +39,13 @@ body {
     left: 8px;
     top: 8px;
     background: var(--brass);
-    color: #000;
+    color: #fff;
     padding: .4rem .8rem;
     z-index: 9
 }
 
 :focus-visible {
-    outline: 2px solid var(--brass2);
+    outline: 2px solid var(--brass);
     outline-offset: 2px
 }
 
@@ -62,21 +64,22 @@ header.top {
     flex-wrap: wrap;
     padding: .9rem 1.2rem;
     border-bottom: 1px solid var(--line);
-    background: #0e0e11cc;
+    background: rgba(247, 243, 234, .88);
     position: sticky;
     top: 0;
-    backdrop-filter: blur(6px);
+    backdrop-filter: blur(8px);
     z-index: 5
 }
 
 .brand {
-    font-family: var(--mono);
+    font-family: var(--serif);
+    font-size: 1.25rem;
     font-weight: 700;
     color: var(--brass);
-    letter-spacing: .08em;
+    letter-spacing: .04em;
     display: flex;
     align-items: center;
-    gap: .5rem
+    gap: .55rem
 }
 
 .lock {
@@ -118,9 +121,10 @@ nav {
 
 .badge {
     font: 600 11px var(--mono);
-    padding: .15rem .5rem;
+    padding: .15rem .55rem;
     border-radius: 99px;
     border: 1px solid var(--line);
+    background: var(--panel);
     color: var(--muted);
     text-transform: uppercase;
     letter-spacing: .06em
@@ -128,51 +132,56 @@ nav {
 
 .badge.owner,
 .badge.edit {
-    color: var(--brass);
-    border-color: #5a4720
+    color: var(--brass2);
+    border-color: #dcc48e;
+    background: #fbf3de
 }
 
 .badge.admin {
-    color: #b69cff;
-    border-color: #43386b
+    color: #5b42b0;
+    border-color: #cfc4f0;
+    background: #f2eefc
 }
 
 .badge.read,
 .badge.viewer {
-    color: var(--ok);
-    border-color: #1d5a40
+    color: #17703f;
+    border-color: #b5dec8;
+    background: #eaf6ef
 }
 
 main {
     max-width: 1100px;
     margin: 0 auto;
-    padding: 1.4rem 1.2rem 4rem
+    padding: 1.6rem 1.2rem 4rem
 }
 
 h1,
 h2,
 h3 {
     margin: 0 0 .6rem;
-    font-weight: 650
+    font-family: var(--serif);
+    font-weight: 700
 }
 
 h2 {
-    font-size: 1.1rem;
+    font-size: 1.2rem;
     color: var(--brass2);
-    letter-spacing: .03em
+    letter-spacing: .01em
 }
 
 .card {
     background: var(--panel);
     border: 1px solid var(--line);
-    border-radius: 12px;
-    padding: 1rem 1.1rem;
-    margin-bottom: 1rem
+    border-radius: 16px;
+    padding: 1.1rem 1.2rem;
+    margin-bottom: 1.1rem;
+    box-shadow: var(--shadow)
 }
 
 .grid {
     display: grid;
-    gap: 1rem
+    gap: 1.1rem
 }
 
 @media(min-width:900px) {
@@ -184,52 +193,70 @@ h2 {
 button,
 .btn {
     font: 600 14px system-ui;
-    border-radius: 8px;
+    border-radius: 10px;
     border: 1px solid var(--line);
-    background: var(--panel2);
+    background: var(--panel);
     color: var(--text);
-    padding: .5rem .9rem;
-    cursor: pointer
+    padding: .5rem .95rem;
+    cursor: pointer;
+    transition: border-color .15s, box-shadow .15s, transform .15s
 }
 
 button:hover {
-    border-color: var(--brass)
+    border-color: var(--brass);
+    box-shadow: 0 4px 12px -6px rgba(154, 106, 20, .5)
+}
+
+button:active {
+    transform: translateY(1px)
 }
 
 button.primary {
     background: var(--brass);
-    color: #16110a;
+    color: #fff;
     border-color: var(--brass)
 }
 
 button.primary:hover {
-    background: var(--brass2)
+    background: var(--brass2);
+    border-color: var(--brass2)
 }
 
 button.danger {
     color: var(--bad);
-    border-color: #5a2424
+    border-color: #efc0ba;
+    background: #fff
+}
+
+button.danger:hover {
+    border-color: var(--bad)
 }
 
 button.tab[aria-current=true] {
     border-color: var(--brass);
-    color: var(--brass2)
+    color: var(--brass2);
+    background: #fbf3de
 }
 
 button:disabled {
-    opacity: .5;
+    opacity: .55;
     cursor: wait
 }
 
 input,
 select {
     font: inherit;
-    background: #0f0f13;
+    background: #fffdf8;
     color: var(--text);
     border: 1px solid var(--line);
-    border-radius: 8px;
-    padding: .5rem .6rem;
+    border-radius: 10px;
+    padding: .55rem .65rem;
     min-width: 0
+}
+
+input:focus,
+select:focus {
+    border-color: var(--brass)
 }
 
 label {
@@ -260,7 +287,7 @@ label {
     align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
-    padding: .7rem 0;
+    padding: .75rem 0;
     border-top: 1px solid var(--line)
 }
 
@@ -279,17 +306,18 @@ label {
 }
 
 .drop {
-    border: 2px dashed #3a3a44;
-    border-radius: 12px;
-    padding: 1.2rem;
+    border: 2px dashed #d4c7a6;
+    border-radius: 14px;
+    padding: 1.3rem;
     text-align: center;
     color: var(--muted);
+    background: #fffdf8;
     transition: .2s
 }
 
 .drop.over {
     border-color: var(--brass);
-    background: #1b1710;
+    background: #fbf3de;
     color: var(--brass2)
 }
 
@@ -302,12 +330,12 @@ label {
 }
 
 .timeline li {
-    padding: .45rem .6rem;
+    padding: .5rem .7rem;
     border-left: 3px solid var(--line);
-    margin: .25rem 0;
+    margin: .3rem 0;
     font-size: 13px;
-    background: #0f0f13;
-    border-radius: 0 8px 8px 0
+    background: #faf7ef;
+    border-radius: 0 10px 10px 0
 }
 
 .timeline li.ALLOWED {
@@ -316,7 +344,7 @@ label {
 
 .timeline li.DENIED {
     border-color: var(--bad);
-    background: #1a0f10
+    background: #fdeeec
 }
 
 .timeline .t {
@@ -336,7 +364,7 @@ label {
     width: 14px;
     height: 14px;
     border-radius: 3px;
-    background: #26262e;
+    background: #e6dfcd;
     animation: pop .25s
 }
 
@@ -376,7 +404,7 @@ table {
 th,
 td {
     text-align: left;
-    padding: .35rem .5rem;
+    padding: .4rem .55rem;
     border-top: 1px solid var(--line);
     vertical-align: top
 }
@@ -402,19 +430,20 @@ td.alw {
     position: fixed;
     right: 1rem;
     bottom: 1rem;
-    background: #14201a;
-    border: 1px solid #1d5a40;
-    color: var(--ok);
+    background: #eaf6ef;
+    border: 1px solid #a9d9c0;
+    color: #17653f;
     padding: .7rem 1rem;
-    border-radius: 10px;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
     z-index: 20;
     max-width: 80vw
 }
 
 .toast.bad {
-    background: #201214;
-    border-color: #5a2424;
-    color: var(--bad)
+    background: #fdecea;
+    border-color: #f0b4ad;
+    color: #a12b20
 }
 
 .login {
@@ -424,9 +453,9 @@ td.alw {
 }
 
 .login h1 {
-    font: 700 2rem var(--mono);
+    font: 700 2.4rem var(--serif);
     color: var(--brass);
-    letter-spacing: .08em
+    letter-spacing: .02em
 }
 
 .demo {
@@ -453,7 +482,7 @@ ul.plain {
 }
 
 ul.plain li {
-    padding: .35rem 0;
+    padding: .4rem 0;
     border-top: 1px solid var(--line);
     display: flex;
     justify-content: space-between;
@@ -470,5 +499,247 @@ ul.plain li:first-child {
     * {
         animation: none !important;
         transition: none !important
+    }
+}
+
+/* ===== Times New Roman everywhere (hashes and IDs stay monospace) ===== */
+:root {
+    --serif: "Times New Roman", Times, serif;
+}
+
+body,
+button,
+.btn,
+input,
+select,
+table,
+label {
+    font-family: "Times New Roman", Times, serif;
+}
+
+body {
+    font-size: 16px;
+}
+
+button,
+.btn {
+    font-size: 15px;
+    font-weight: 700;
+}
+
+/* ===== Login: split card ===== */
+.login {
+    max-width: 940px;
+    width: calc(100% - 2rem);
+    margin: 7vh auto;
+    padding: 0;
+    display: grid;
+    grid-template-columns: 1.05fr 1fr;
+    grid-template-rows: auto 1fr;
+    border-radius: 22px;
+    overflow: hidden;
+    background: var(--panel);
+    box-shadow: 0 2px 4px rgba(36, 49, 44, .06), 0 30px 60px -28px rgba(36, 49, 44, .45)
+}
+
+.login::before {
+    content: "";
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    background:
+        radial-gradient(420px 260px at 100% 0, rgba(217, 164, 65, .35), transparent 70%),
+        linear-gradient(160deg, #1d3a30 0%, #2c5646 65%, #3a6a57 100%)
+}
+
+.login h1 {
+    grid-column: 1;
+    grid-row: 1;
+    position: relative;
+    z-index: 1;
+    align-self: end;
+    margin: 0;
+    padding: 3rem 2.2rem .4rem;
+    font-family: var(--serif);
+    font-size: 2.7rem;
+    font-weight: 700;
+    letter-spacing: .14em;
+    color: #f7f3ea
+}
+
+.login p.muted {
+    grid-column: 1;
+    grid-row: 2;
+    position: relative;
+    z-index: 1;
+    align-self: start;
+    margin: 0;
+    padding: 0 2.2rem 3rem;
+    color: #e6d9b8;
+    font-size: 1.1rem;
+    font-style: italic;
+    white-space: pre-line
+}
+
+.login p.muted::after {
+    content: "\A\2713  Admins manage people but can never read your files\A\2713  Every refusal is written to a tamper-evident ledger\A\2713  Access is revoked the instant you say so";
+    display: block;
+    margin-top: 1.6rem;
+    font-style: normal;
+    font-size: .98rem;
+    line-height: 2;
+    color: #f2ead6
+}
+
+.login .card {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 2.6rem 2.2rem;
+    align-content: center;
+    background: var(--panel)
+}
+
+.login .card form label {
+    font-size: 14px;
+    color: var(--text)
+}
+
+.login .card form input {
+    width: 100%;
+    padding: .7rem .8rem;
+    font-size: 16px
+}
+
+.login button.primary {
+    width: 100%;
+    padding: .75rem;
+    font-size: 16px;
+    letter-spacing: .06em
+}
+
+.login .tag {
+    margin-top: 1.4rem;
+    font: 13px var(--serif);
+    color: var(--muted)
+}
+
+@media (max-width: 760px) {
+    .login {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto;
+        margin: 4vh auto
+    }
+
+    .login::before {
+        grid-column: 1;
+        grid-row: 1 / span 2
+    }
+
+    .login h1 {
+        padding-top: 2rem;
+        font-size: 2.1rem
+    }
+
+    .login p.muted {
+        padding-bottom: 2rem
+    }
+
+    .login .card {
+        grid-column: 1;
+        grid-row: 3
+    }
+}
+
+/* ===== Login backdrop: ledger chain + vault dial ===== */
+body:has(.login) {
+    background:
+        radial-gradient(700px 420px at 10% 5%, rgba(217, 164, 65, .20), transparent 70%),
+        radial-gradient(800px 520px at 92% 100%, rgba(44, 86, 70, .24), transparent 70%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='240' viewBox='0 0 360 240'%3E%3Cg fill='none' stroke='%232c5646' stroke-opacity='.16' stroke-width='1.2'%3E%3Crect x='20' y='30' width='96' height='34' rx='6'/%3E%3Crect x='170' y='30' width='96' height='34' rx='6'/%3E%3Cpath d='M0 47H20M116 47H170M266 47H360'/%3E%3Crect x='95' y='150' width='96' height='34' rx='6'/%3E%3Crect x='245' y='150' width='96' height='34' rx='6'/%3E%3Cpath d='M0 167H95M191 167H245M341 167H360'/%3E%3C/g%3E%3Cg font-family='monospace' font-size='10' fill='%232c5646' fill-opacity='.30'%3E%3Ctext x='30' y='51'%3Ea3f9%C2%B7c71e%3C/text%3E%3Ctext x='180' y='51'%3E7be2%C2%B7094d%3C/text%3E%3Ctext x='105' y='171'%3Ef10c%C2%B78a3b%3C/text%3E%3Ctext x='255' y='171'%3E5d77%C2%B7e92a%3C/text%3E%3C/g%3E%3C/svg%3E"),
+        #eef0e8;
+    background-attachment: fixed;
+    overflow-x: hidden;
+}
+
+body:has(.login) #app {
+    position: relative;
+    z-index: 1;
+}
+
+/* Big tick-mark dial, like a vault combination wheel */
+body:has(.login)::before {
+    content: "";
+    position: fixed;
+    z-index: 0;
+    top: 50%;
+    left: 50%;
+    width: 780px;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: repeating-conic-gradient(rgba(44, 86, 70, .35) 0 .7deg, transparent .7deg 6deg);
+    -webkit-mask: radial-gradient(circle, transparent 66%, #000 67%, #000 74%, transparent 75%);
+    mask: radial-gradient(circle, transparent 66%, #000 67%, #000 74%, transparent 75%);
+    animation: dial-turn 140s linear infinite;
+    pointer-events: none;
+}
+
+/* Brass inner ring turning the other way */
+body:has(.login)::after {
+    content: "";
+    position: fixed;
+    z-index: 0;
+    top: 50%;
+    left: 50%;
+    width: 600px;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    border: 2px dashed rgba(217, 164, 65, .55);
+    animation: dial-turn-rev 90s linear infinite;
+    pointer-events: none;
+}
+
+@keyframes dial-turn {
+    to {
+        transform: translate(-50%, -50%) rotate(360deg);
+    }
+}
+
+@keyframes dial-turn-rev {
+    from {
+        transform: translate(-50%, -50%) rotate(360deg);
+    }
+
+    to {
+        transform: translate(-50%, -50%) rotate(0deg);
+    }
+}
+
+/* Concentric rings on the green panel */
+.login::before {
+    background:
+        repeating-radial-gradient(circle at 12% 108%, rgba(247, 243, 234, .10) 0 2px, transparent 2px 28px),
+        radial-gradient(420px 260px at 100% 0, rgba(217, 164, 65, .35), transparent 70%),
+        linear-gradient(160deg, #1d3a30 0%, #2c5646 65%, #3a6a57 100%);
+}
+
+@media (max-width: 760px) {
+    body:has(.login)::before {
+        width: 520px;
+    }
+
+    body:has(.login)::after {
+        width: 400px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    body:has(.login)::before,
+    body:has(.login)::after {
+        animation: none;
+        transform: translate(-50%, -50%);
     }
 }
