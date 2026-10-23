@@ -46,4 +46,4 @@ Thumbs.db
    vitest-output.txt
 
    *.db-wal
-   *.db-shm
+   *.db-shmstrongroom.db*
