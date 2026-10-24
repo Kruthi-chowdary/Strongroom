@@ -25,12 +25,14 @@ How I think Strongroom could be broken, what I did, and what I knowingly left op
 | **Viewer uploads** | Upload route requires the owner role | `viewer cannot upload` | closed |
 | **Stored XSS via file name** | UI never uses `innerHTML`; all text is set with `textContent`; Helmet CSP blocks inline script | manual check only | closed, **test missing** |
 | **Files readable from disk** | AES-256-GCM per file; key only in an environment variable; integrity checked against stored sha256 on download | none | closed, **test missing** |
-| **Secrets in the repo** | `.env` ignored; keys live only in Render environment variables. Two values were pasted into a chat during development, so both were rotated | n/a | closed |
+| **Secrets in the repo** | `.env` and local SQLite files (`strongroom.db*`) are git-ignored; keys live only in Render environment variables. Two values were pasted into a chat during development, so both were rotated | n/a | closed |
+| **Vulnerable dependencies (production)** | `uuid` upgraded to the patched compatible version (`^11.1.1`). `npm audit --omit=dev` reports 0. The Docker runtime stage installs with `npm ci --omit=dev`, so dev tooling never ships | build + 154 tests pass after the upgrade | closed |
 
 ## Knowingly accepted
 
 | Threat | Why I left it | Status |
 |---|---|---|
+| **Dev-only dependency findings** | 5 remaining `npm audit` findings are in dev tooling (test runner, dev server). They are not in the deployed image. I did not run `npm audit fix --force` because it risks breaking the build. Needs triage after the hackathon | accepted |
 | **Someone with direct DB access rewrites the whole chain** | A hash chain proves internal consistency, not authorship. Mitigation not built: publish the head hash externally. The admin screen shows the current head so it can be recorded | accepted |
 | **Ticket store is in memory** | Restart drops tickets (harmless, request again) and it cannot scale beyond one instance | accepted |
 | **Ephemeral disk on the free tier** | Database and files reset on restart and reseed. Fine for a demo; a real deployment needs a persistent volume or Postgres plus object storage | accepted |
@@ -38,10 +40,10 @@ How I think Strongroom could be broken, what I did, and what I knowingly left op
 | **User directory visible to owners** | Needed to pick who to share with. Only enabled non-admin users, names and emails | accepted |
 | **Noisy audit rows** | Opening the Share panel writes `share` rows for the grants and custody lists. Not a security weakness, but it clutters the log | accepted |
 | **Public demo passwords** | Required so judges can log in. Demo data only | accepted |
-| **Dependency vulnerabilities** | Production audit is clean (`npm audit --omit=dev`: 0 issues). 5 remaining findings are dev-only tooling (test runner, dev server) and are not in the deployed image, because the Dockerfile installs with `--omit=dev`. I did not use `npm audit fix --force` because it risks breaking the build. | accepted |
-| **No MFA, no password change or reset flow** | Out of scope for this week | accepted |
+| **No MFA, no password change or reset flow** | Out of scope for this work | accepted |
 | **Tripwires are basic** | Repeated denials, attempts by disabled users, permission changes. Off-hours downloads and external-domain grants are not implemented | accepted |
 | **`edit` and `delete` have no routes** | `authorize()` enforces them and the matrix tests them, but nothing calls them yet | accepted |
+| **Logout cookie-clear options** | `clearCookie` on logout does not repeat the `secure` flag used at login. The server-side session is revoked either way, so the cookie is useless after logout. Low risk, not changed | accepted |
 | **Timing differences between 404 causes** | Refusals all take a similar short path, but I did not measure it | accepted, unverified |
 | **Rate limit keyed on proxy IP** | Behind Render the limiter depends on `trust proxy = 1` being correct | accepted, unverified |
 
