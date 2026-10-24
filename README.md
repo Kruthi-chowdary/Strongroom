@@ -1,52 +1,155 @@
-# THREATS.md
+# Strongroom
 
-How I think Strongroom could be broken, what I did, and what I knowingly left open. Test names refer to `tests/*.test.ts`.
+> Every door guarded. Every opening logged.
 
-## Closed
+A secure document-sharing platform where the wrong person cannot reach a file, and every access (including refused attempts) is written to a tamper-evident ledger.
 
-| Threat | What I did | Test | Status |
-|---|---|---|---|
-| **IDOR**: guess another document's id | Every document route calls `authorize()`; ids must be UUID-shaped; refusal is an identical 404 and a DENIED audit row | `viewer with no grant cannot get a ticket`, `another owner cannot ticket, grant or read custody of it` | closed |
-| **Admin overreach** | Admin may only `view_audit`. Document list returns empty for admin; grants to admins are refused | `admin1 / ... ` matrix (30 cases), `admin cannot list or download contents` | closed |
-| **Forged or stale role** | `authorize()` re-reads the role from the DB, ignoring the caller's value | `FORGED ROLE: viewer claiming admin...` | closed |
-| **Revoked but still has link** | Grants re-read on every call; tickets are single use, 60 s, bound to user + document, and `authorize()` runs again at redemption | `grant works, ticket is single-use, revoke between issue and redeem is refused` | closed |
-| **Ticket replay / theft by another user** | Ticket deleted on first lookup; must be redeemed by the same logged-in user | `a ticket cannot be redeemed by a different user` (replay is in the revoke test) | closed |
-| **Disabled user keeps access** | Sessions and `authorize()` both check `users.disabled` on every request | `disabled owner is denied`, `auth.test.ts` disabled-session test | closed |
-| **Search leakage** | Authorisation is inside the SQL join, not a post-filter; `%` and `_` are escaped; no totals returned | `viewer search returns none of owner1 docs...`, `LIKE wildcard % does not widen search` | closed |
-| **Audit tampering** | Hash chain over every column; triggers abort UPDATE and DELETE; verify detects dropped triggers and edited rows, and missing rows via id sequence | `UPDATE and DELETE on audit_log are blocked by triggers`, `if triggers are dropped, verify detects the edit`, `AUDIT: editing ip or detail_json breaks the hash` | closed |
-| **Refusals not logged** | `authorize()` writes DENIED rows; failed uploads and logins are logged too | `AUDIT: every call writes exactly one row, DENIED included` | closed |
-| **Brute force / credential stuffing** | 10 failures per IP and 5 per email in 15 min; email lowercased; lockout uses exact `json_extract` match, not `LIKE` | not covered by an automated test yet (fixed after review; see PROMPTS.md) | closed, **test missing** |
-| **Account enumeration** | Same message and status for unknown email, wrong password, disabled user and lockout; bcrypt always runs against a real dummy hash | `auth.test.ts` identical-response test | closed |
-| **Session theft after DB leak** | Only `sha256(token)` is stored; cookie is httpOnly, SameSite=Strict, Secure in production | `session token is not stored raw in the DB` | closed |
-| **CSRF** | Cookies are SameSite=Strict, plus required `X-Requested-With` header and Origin check on state-changing methods | `csrfGuard rejects a POST without the header` | closed |
-| **Session fixation** | Login revokes the user's older sessions and issues a new random token | none yet | closed, **test missing** |
-| **Path traversal** | Files are stored under server-generated UUIDs; storage keys are validated against a UUID pattern; display names are sanitised | `traversal filename is sanitised, upload stores under uuid` | closed |
-| **Malicious upload** | Extension allowlist, magic bytes must match, double extensions rejected, HTML/SVG/executables rejected, 5 MB cap, downloads are `attachment` + `nosniff` + `octet-stream` | `rejects .html, double extension, and content/extension mismatch` | closed |
-| **Viewer uploads** | Upload route requires the owner role | `viewer cannot upload` | closed |
-| **Stored XSS via file name** | UI never uses `innerHTML`; all text is set with `textContent`; Helmet CSP blocks inline script | manual check only | closed, **test missing** |
-| **Files readable from disk** | AES-256-GCM per file; key only in an environment variable; integrity checked against stored sha256 on download | none | closed, **test missing** |
-| **Secrets in the repo** | `.env` and local SQLite files (`strongroom.db*`) are git-ignored; keys live only in Render environment variables. Two values were pasted into a chat during development, so both were rotated | n/a | closed |
-| **Vulnerable dependencies (production)** | `uuid` upgraded to the patched compatible version (`^11.1.1`). `npm audit --omit=dev` reports 0. The Docker runtime stage installs with `npm ci --omit=dev`, so dev tooling never ships | build + 154 tests pass after the upgrade | closed |
+**Live demo:** https://strongroom-buas.onrender.com
+**Repo:** https://github.com/Kruthi-chowdary/Strongroom
+**Also read:** [THREATS.md](THREATS.md) (threats, tests, accepted risks) and [PROMPTS.md](PROMPTS.md) (how AI was used and where it was wrong)
 
-## Knowingly accepted
+> The demo runs on Render's free tier: it sleeps after ~15 min idle (first load can take 30-60 s) and its disk is ephemeral, so the database resets and **reseeds on every restart**. Demo data only.
 
-| Threat | Why I left it | Status |
+## Demo accounts (public demo data only)
+
+| Role | Email | Password |
 |---|---|---|
-| **Dev-only dependency findings** | 5 remaining `npm audit` findings are in dev tooling (test runner, dev server). They are not in the deployed image. I did not run `npm audit fix --force` because it risks breaking the build. Needs triage after the hackathon | accepted |
-| **Someone with direct DB access rewrites the whole chain** | A hash chain proves internal consistency, not authorship. Mitigation not built: publish the head hash externally. The admin screen shows the current head so it can be recorded | accepted |
-| **Ticket store is in memory** | Restart drops tickets (harmless, request again) and it cannot scale beyond one instance | accepted |
-| **Ephemeral disk on the free tier** | Database and files reset on restart and reseed. Fine for a demo; a real deployment needs a persistent volume or Postgres plus object storage | accepted |
-| **Single SQLite node** | No horizontal scaling | accepted |
-| **User directory visible to owners** | Needed to pick who to share with. Only enabled non-admin users, names and emails | accepted |
-| **Noisy audit rows** | Opening the Share panel writes `share` rows for the grants and custody lists. Not a security weakness, but it clutters the log | accepted |
-| **Public demo passwords** | Required so judges can log in. Demo data only | accepted |
-| **No MFA, no password change or reset flow** | Out of scope for this work | accepted |
-| **Tripwires are basic** | Repeated denials, attempts by disabled users, permission changes. Off-hours downloads and external-domain grants are not implemented | accepted |
-| **`edit` and `delete` have no routes** | `authorize()` enforces them and the matrix tests them, but nothing calls them yet | accepted |
-| **Logout cookie-clear options** | `clearCookie` on logout does not repeat the `secure` flag used at login. The server-side session is revoked either way, so the cookie is useless after logout. Low risk, not changed | accepted |
-| **Timing differences between 404 causes** | Refusals all take a similar short path, but I did not measure it | accepted, unverified |
-| **Rate limit keyed on proxy IP** | Behind Render the limiter depends on `trust proxy = 1` being correct | accepted, unverified |
+| Admin | admin@strongroom.local | Admin$ecret1! |
+| Owner | owner1@strongroom.local | Owner$ecret1! |
+| Owner | owner2@strongroom.local | Owner$ecret2! |
+| Viewer | viewer1@strongroom.local | Viewer$ecret1! |
+| Viewer | viewer2@strongroom.local | Viewer$ecret2! |
+| Viewer | viewer3@strongroom.local | Viewer$ecret3! |
 
-## AI-in-product
+The login page has one-click buttons that fill these in.
 
-Not built. The intended design: a suggestion endpoint that can only return suggestions, never writes a grant, with the owner confirming in a separate call and both events audited (SUGGESTION_MADE, GRANT_CONFIRMED_BY_HUMAN).
+## What to try (2 minutes)
+
+1. Log in as **Owner 1**, open "Upload a document", and upload a small .txt file.
+2. Click **Share & custody**, grant it to Viewer 1 (read), then log in as Viewer 1 in another window and download it.
+3. As Owner 1, click **Revoke**. Viewer 1's next download is refused immediately.
+4. In the **Chain of custody** timeline, see the allowed (✓) and refused (✗) attempts.
+5. Log in as **Admin**: open the Security console, then click **Verify ledger** to recompute the hash chain. Note the admin sees no document contents.
+6. Use the **Light / Dark / System** switch in the top bar.
+
+## Roles (written down)
+
+| Role | Can do | Cannot do |
+|---|---|---|
+| **Admin** | View audit log, verify ledger, see tripwires, list users | Read, download, edit, delete or share any document content. Not even by grant (grants to admins are refused). |
+| **Owner** | Upload; read/download/edit/delete/share own documents; grant and revoke access; see chain of custody of own documents | Touch other owners' documents unless granted |
+| **Viewer** | Read/download documents granted to them (read or edit permission) | Upload, share, or see anything not granted |
+
+## Permission model (in my own words)
+
+**Per-document grants only.** A document has one owner. The owner may grant another (non-admin) user `read` or `edit`, optionally with an expiry, and may revoke at any time. There are no folders and no groups. I chose this deliberately: a smaller model that holds beats a bigger one with a hole in it, and "someone given a folder can now see forty files" cannot happen when there are no folders.
+
+**One chokepoint.** Every route that touches a document calls `authorize(db, actor, docId, action, ctx)` in `src/auth/authorize.ts`. It is default-deny, re-reads the user (disabled flag and **role**), the document and the grants from the database on every call (no caching), and writes an audit row for every decision, ALLOWED or DENIED. The caller only learns `{ allowed }`, never why.
+
+**Refusals look like "not found".** Unknown, deleted and not-granted documents all return the same `404 {"error":"not found"}`.
+
+**Instant revocation.** Sessions are server-side rows (a revoked or disabled user is refused on the very next request). Downloads use single-use 60-second tickets, and `authorize()` runs again when the ticket is redeemed, so a grant revoked between issue and use is refused.
+
+## Audit trail
+
+Every row stores `hash = sha256(prev_hash + JSON of every column)`. SQLite triggers abort any `UPDATE` or `DELETE` on `audit_log`. `GET /api/admin/audit/verify` recomputes the whole chain and returns the first broken row; the admin screen's **Verify ledger** button animates it. If someone drops the triggers and edits a row, verification still detects it (tested). Refused attempts are logged too.
+
+## Interface
+
+Plain HTML, CSS and JavaScript (no framework) served by the same Express app. All text is set with `textContent`, never `innerHTML`, so file names cannot inject script. Includes a custody timeline with icons (not colour alone), stat tiles, a Security console for admins, a collapsible upload card, and a Light / Dark / System theme switch that remembers your choice.
+
+## What I deliberately did not build
+
+- Folders, groups and inheritance (see above)
+- External (outside-company) sharing
+- Document versions, delete, edit and recovery screens (`edit` and `delete` exist in `authorize()` but no routes use them yet)
+- Retention policy
+- AI access suggestions (the safe design is documented in THREATS.md, but it is not built)
+- Off-hours download and external-domain grant tripwires
+- Horizontal scaling: tickets live in memory and SQLite is a single node
+
+## Run it locally (from a clean clone)
+
+Requires Node 22+.
+
+```bash
+git clone https://github.com/Kruthi-chowdary/Strongroom.git
+cd Strongroom
+npm ci
+npm test            # 154 tests
+npm run build
+```
+
+Start it (PowerShell):
+
+```powershell
+$env:FILE_ENCRYPTION_KEY = node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+$env:SEED_DEMO = 'true'
+npm start
+```
+
+Bash:
+
+```bash
+export FILE_ENCRYPTION_KEY=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
+export SEED_DEMO=true
+npm start
+```
+
+Open http://localhost:3000.
+
+### Environment variables
+
+| Variable | Purpose |
+|---|---|
+| `SESSION_SECRET` | Required in production |
+| `FILE_ENCRYPTION_KEY` | 64 hex chars; AES-256-GCM key for files at rest |
+| `SEED_DEMO` | `true` seeds demo users and documents when the users table is empty |
+| `DB_PATH` | SQLite file (default `./strongroom.db`) |
+| `STORAGE_DIR` | Encrypted file folder (default `./storage`) |
+| `PORT` | Default 3000 |
+
+## Deploy (Render)
+
+New Web Service, connect the repo, runtime **Docker**, Free plan, health check path `/health`, set `SESSION_SECRET`, `FILE_ENCRYPTION_KEY`, `SEED_DEMO=true`. The Dockerfile uses Node 22 (required by `better-sqlite3@13`), runs as a non-root user, and installs only production dependencies in the runtime image.
+
+## Database
+
+Schema: `src/schema.sql` (users, sessions, documents, grants, audit_log, plus the append-only triggers). It is applied idempotently on every start by `src/db.ts`. Seeding: `src/seed.ts`.
+
+## API (who may call what)
+
+All state-changing calls need the header `X-Requested-With: strongroom` and a session cookie. "Refused" means `404 {"error":"not found"}` unless noted. Every document route is gated by `authorize()`.
+
+| Method & path | Who may call | Notes |
+|---|---|---|
+| `GET /health` | Anyone | Liveness |
+| `POST /api/auth/login` | Anyone | Same error for unknown email, wrong password, disabled user, lockout. 10 failures / 15 min per IP; 5 failures / 15 min per email |
+| `POST /api/auth/logout` | Anyone with a session | Revokes the session |
+| `GET /api/auth/me` | Any logged-in user | |
+| `POST /api/documents` | Owner | Multipart upload; validated and encrypted; owner = session user |
+| `GET /api/documents?q=&category=` | Any logged-in user | Returns only own + granted documents (auth inside the SQL). Admin always gets an empty list |
+| `POST /api/documents/:id/download-ticket` | Owner, or user with read/edit grant | `authorize('download')`; refused otherwise |
+| `GET /api/download/:ticket` | The user the ticket was issued to | Single use, 60 s; `authorize('download')` runs again |
+| `POST /api/documents/:id/grants` | Document owner only | `authorize('share')`; never to admins or self |
+| `DELETE /api/documents/:id/grants/:grantId` | Document owner only | Takes effect immediately |
+| `GET /api/documents/:id/grants` | Document owner only | Active grants |
+| `GET /api/documents/:id/custody` | Document owner only | Chain of custody |
+| `GET /api/users` | Owner, Admin | Owners see enabled non-admins; admin sees all |
+| `GET /api/admin/audit` | Admin | Filters: action, outcome, limit |
+| `GET /api/admin/audit/verify` | Admin | Recomputes the hash chain |
+| `GET /api/admin/notable` | Admin | Tripwires |
+
+## Tests
+
+`npm test` runs 154 tests: the full role x grant-state x action matrix for `authorize()`, auth/session/CSRF tests (login, logout, disabled user, revoked session, token not stored raw, enumeration), and isolation tests (IDOR, search leakage, ticket replay, revoke between issue and redeem, admin overreach, malicious uploads, audit tampering). I also removed individual checks on purpose: deleting `authorize()` from ticket issue fails 4 tests, deleting it from ticket redemption fails 1.
+
+**Not covered by automated tests yet:** login lockout and rate limiting, session fixation, the production `Secure` cookie flag, and file encryption at rest. These are listed in THREATS.md as "test missing".
+
+## AI use
+
+See `PROMPTS.md` for the context file reused all week (`AGENTS.md`) and the specific places the AI was wrong.
+
+## What is unfinished
+
+No document delete/edit/version routes, no external sharing, tripwires are basic, tickets are in memory, the work was compressed into a few days rather than spread over the week (see commit history), and the Antigravity quota ran out twice, so part of the code was written in a chat assistant and pasted in by me after review.
